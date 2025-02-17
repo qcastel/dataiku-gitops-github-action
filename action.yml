@@ -47,7 +47,8 @@ runs:
     - name: Install Dataiku Python API
       run: |
         echo "Installing Dataiku Python API"
-        tar -xzf dataiku.tar.gz
+        mkdir -p dataiku
+        tar -xzf dataiku.tar.gz -C dataiku --strip-components=1
         if [ $? -ne 0 ]; then
           echo "Failed to extract Dataiku Python API package"
           exit 1
