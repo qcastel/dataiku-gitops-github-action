@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import subprocess
+import types
 from dataiku import Client
 
 # Environment variables
@@ -9,6 +10,10 @@ DATAIKU_API_TOKEN = os.getenv('DATAIKU_API_TOKEN')
 DATAIKU_INSTANCE_A_URL = os.getenv('DATAIKU_INSTANCE_A_URL')
 DATAIKU_INSTANCE_B_URL = os.getenv('DATAIKU_INSTANCE_B_URL')
 DATAIKU_PROJECT_KEY = os.getenv('DATAIKU_PROJECT_KEY')
+
+# Mock the pipes module
+sys.modules['pipes'] = types.ModuleType('pipes')
+sys.modules['pipes'].quote = lambda x: x
 
 # Initialize Dataiku clients
 client_a = Client(DATAIKU_INSTANCE_A_URL, DATAIKU_API_TOKEN)
