@@ -14,10 +14,8 @@ DATAIKU_INSTANCE_B_URL = os.getenv('DATAIKU_INSTANCE_B_URL')
 DATAIKU_PROJECT_KEY = os.getenv('DATAIKU_PROJECT_KEY')
 
 # Create Dataiku clients
-client_a = dataikuapi.DSSClient(DATAIKU_INSTANCE_A_URL, DATAIKU_API_TOKEN)
-client_b = dataikuapi.DSSClient(DATAIKU_INSTANCE_B_URL, DATAIKU_API_TOKEN)
-client_a._session.verify = False
-client_b._session.verify = False
+client_a = dataikuapi.DSSClient(DATAIKU_INSTANCE_A_URL, DATAIKU_API_TOKEN, no_check_certificate=True)
+client_b = dataikuapi.DSSClient(DATAIKU_INSTANCE_B_URL, DATAIKU_API_TOKEN, no_check_certificate=True)
 
 def export_bundle(client, project_key, bundle_id, release_notes=None):
     project = client.get_project(project_key)
