@@ -1,23 +1,30 @@
 import os
 import sys
-import time
 import subprocess
-import types
-from dataiku import Client
+import dataikuapi
+import logging
+import requests
+import http.client
+import urllib3
+from packaging import version
 
-# Environment variables
+# Enable debug logging for the requests library
+#logging.getLogger("requests").setLevel(logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
+#http.client.HTTPConnection.debuglevel = 1
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Access environment variables
 DATAIKU_API_TOKEN = os.getenv('DATAIKU_API_TOKEN')
 DATAIKU_INSTANCE_A_URL = os.getenv('DATAIKU_INSTANCE_A_URL')
 DATAIKU_INSTANCE_B_URL = os.getenv('DATAIKU_INSTANCE_B_URL')
 DATAIKU_PROJECT_KEY = os.getenv('DATAIKU_PROJECT_KEY')
 
-# Mock the pipes module
-sys.modules['pipes'] = types.ModuleType('pipes')
-sys.modules['pipes'].quote = lambda x: x
-
-# Initialize Dataiku clients
-client_a = Client(DATAIKU_INSTANCE_A_URL, DATAIKU_API_TOKEN)
-client_b = Client(DATAIKU_INSTANCE_B_URL, DATAIKU_API_TOKEN)
+# Create Dataiku clients
+client_a = dataikuapi.DSSClient(DATAIKU_INSTANCE_A_URL, api_key=DATAIKU_API_TOKEN)
+client_b = dataikuapi.DSSClient(DATAIKU_INSTANCE_B_URL, api_key=DATAIKU_API_TOKEN)
+client_a._session.verify = False
+client_b._session.verify = False
 
 def create_bundle(client, project_key):
     project = client.get_project(project_key)
