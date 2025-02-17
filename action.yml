@@ -30,36 +30,7 @@ runs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests pandas
-      shell: bash
-
-    - name: Download Dataiku Python API
-      run: |
-        echo "Downloading Dataiku Python API from ${{ inputs.dataiku_instance_a_url }}"
-        curl -k -o dataiku.tar.gz ${{ inputs.dataiku_instance_a_url }}/public/packages/dataiku-internal-client.tar.gz
-        if [ $? -ne 0 ]; then
-          echo "Failed to download Dataiku Python API package"
-          exit 1
-        fi
-        echo "Downloaded Dataiku Python API package"
-      shell: bash
-
-    - name: Install Dataiku Python API
-      run: |
-        echo "Installing Dataiku Python API"
-        mkdir -p dataiku
-        tar -xzf dataiku.tar.gz -C dataiku --strip-components=1
-        if [ $? -ne 0 ]; then
-          echo "Failed to extract Dataiku Python API package"
-          exit 1
-        fi
-        echo "Extracted Dataiku Python API package"
-        python -m pip install ./dataiku
-        if [ $? -ne 0 ]; then
-          echo "Failed to install Dataiku Python API"
-          exit 1
-        fi
-        echo "Installed Dataiku Python API"
+        pip install requests pandas dataiku-api-client
       shell: bash
 
     - name: Run Dataiku GitOps Action

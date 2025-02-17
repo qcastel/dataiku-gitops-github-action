@@ -1,7 +1,7 @@
 import os
 import sys
 import subprocess
-import dataiku
+import dataikuapi
 import logging
 import requests
 import http.client
@@ -21,8 +21,8 @@ DATAIKU_INSTANCE_B_URL = os.getenv('DATAIKU_INSTANCE_B_URL')
 DATAIKU_PROJECT_KEY = os.getenv('DATAIKU_PROJECT_KEY')
 
 # Create Dataiku clients
-client_a = dataiku.DSSClient(DATAIKU_INSTANCE_A_URL, api_key=DATAIKU_API_TOKEN)
-client_b = dataiku.DSSClient(DATAIKU_INSTANCE_B_URL, api_key=DATAIKU_API_TOKEN)
+client_a = dataikuapi.DSSClient(DATAIKU_INSTANCE_A_URL, api_key=DATAIKU_API_TOKEN)
+client_b = dataikuapi.DSSClient(DATAIKU_INSTANCE_B_URL, api_key=DATAIKU_API_TOKEN)
 client_a._session.verify = False
 client_b._session.verify = False
 
