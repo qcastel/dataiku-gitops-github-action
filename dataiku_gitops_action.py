@@ -3,6 +3,7 @@ import sys
 import subprocess
 import dataikuapi
 import urllib3
+import hashlib
 
 # Disable warnings for unverified HTTPS requests
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -20,6 +21,13 @@ DATAIKU_PROJECT_KEY = os.getenv('DATAIKU_PROJECT_KEY')
 client_dev = dataikuapi.DSSClient(DATAIKU_INSTANCE_DEV_URL, DATAIKU_API_TOKEN_DEV, no_check_certificate=True)
 client_staging = dataikuapi.DSSClient(DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, no_check_certificate=True)
 client_prod = dataikuapi.DSSClient(DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, no_check_certificate=True)
+
+def get_commit_id():
+    result = subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True)
+    return result.stdout.strip()
+
+def generate_bundle_id(commit_id):
+    return f"bundle_{commit_id[:8]}"
 
 def export_bundle(client, project_key, bundle_id, release_notes=None):
     project = client.get_project(project_key)
@@ -44,9 +52,12 @@ def run_tests(script_path, instance_url, project_key):
 
 def main():
     try:
-        # Export bundle from DEV instance
-        bundle_id = "my_bundle"  # Replace with your desired bundle ID
+        # Get the current commit ID
+        commit_id = get_commit_id()
+        bundle_id = generate_bundle_id(commit_id)
         release_notes = "Initial release"  # Optional release notes
+
+        # Export bundle from DEV instance
         export_bundle(client_dev, DATAIKU_PROJECT_KEY, bundle_id, release_notes)
         print(f"Bundle exported with ID: {bundle_id}")
 
