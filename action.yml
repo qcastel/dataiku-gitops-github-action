@@ -36,7 +36,7 @@ runs:
     - name: Install Dataiku Python API
       run: |
         echo "Installing Dataiku Python API from ${{ inputs.dataiku_instance_a_url }}"
-        pip install ${{ inputs.dataiku_instance_a_url }}/public/packages/dataiku-internal-client.tar.gz
+        pip install --trusted-host ${{ inputs.dataiku_instance_a_url }} ${{ inputs.dataiku_instance_a_url }}/public/packages/dataiku-internal-client.tar.gz
         if [ $? -ne 0 ]; then
           echo "Failed to install Dataiku Python API"
           exit 1
