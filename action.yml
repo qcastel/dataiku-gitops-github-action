@@ -35,20 +35,8 @@ runs:
 
     - name: Install Dataiku Python API
       run: |
-        echo "Downloading Dataiku Python API from ${{ inputs.dataiku_instance_a_url }}"
-        curl -k -o dataiku.zip ${{ inputs.dataiku_instance_a_url }}/public/api/packages/dataiku.zip
-        if [ $? -ne 0 ]; then
-          echo "Failed to download Dataiku Python API package"
-          exit 1
-        fi
-        echo "Downloaded Dataiku Python API package"
-        unzip dataiku.zip -d dataiku
-        if [ $? -ne 0 ]; then
-          echo "Failed to unzip Dataiku Python API package"
-          exit 1
-        fi
-        echo "Unzipped Dataiku Python API package"
-        python -m pip install ./dataiku
+        echo "Installing Dataiku Python API from ${{ inputs.dataiku_instance_a_url }}"
+        pip install ${{ inputs.dataiku_instance_a_url }}/public/packages/dataiku-internal-client.tar.gz
         if [ $? -ne 0 ]; then
           echo "Failed to install Dataiku Python API"
           exit 1
