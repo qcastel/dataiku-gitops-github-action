@@ -1,0 +1,43 @@
+name: "Dataiku GitOps Action"
+description: "Run Dataiku GitOps workflow"
+inputs:
+  python-script:
+    description: "Path to the Python script to run"
+    required: true
+  dataiku_api_token:
+    description: "Dataiku API token"
+    required: true
+  dataiku_instance_a_url:
+    description: "URL of the development Dataiku instance"
+    required: true
+  dataiku_instance_b_url:
+    description: "URL of the staging Dataiku instance"
+    required: true
+  dataiku_project_key:
+    description: "Key of the Dataiku project"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.x"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+      shell: bash
+
+    - name: Run Python script
+      env:
+        DATAIKU_API_TOKEN: ${{ secrets.DATAIKU_API_TOKEN }}
+        DATAIKU_INSTANCE_A_URL: ${{ secrets.DATAIKU_INSTANCE_A_URL }}
+        DATAIKU_INSTANCE_B_URL: ${{ secrets.DATAIKU_INSTANCE_B_URL }}
+        DATAIKU_PROJECT_KEY: ${{ secrets.DATAIKU_PROJECT_KEY }}
+      run: |
+        python ${{ inputs.python-script }}
