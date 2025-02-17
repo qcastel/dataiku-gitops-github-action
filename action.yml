@@ -35,7 +35,7 @@ runs:
 
     - name: Install Dataiku Python API
       run: |
-        curl -o dataiku.zip https://${{ inputs.dataiku_instance_a_url }}/public/api/packages/dataiku.zip
+        curl -o dataiku.zip ${{ inputs.dataiku_instance_a_url }}/public/api/packages/dataiku.zip
         unzip dataiku.zip -d dataiku
         python -m pip install ./dataiku
       shell: bash
