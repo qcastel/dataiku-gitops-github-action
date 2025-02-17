@@ -33,38 +33,27 @@ runs:
         pip install requests
       shell: bash
 
-    - name: Download and Trust Self-Signed Certificate
+    - name: Download Dataiku Python API
       run: |
-        echo "Downloading self-signed certificate from ${{ inputs.dataiku_instance_a_url }}"
-        curl -k -o self-signed.crt ${{ inputs.dataiku_instance_a_url }}/public/api/packages/dataiku-internal-client.tar.gz
+        echo "Downloading Dataiku Python API from ${{ inputs.dataiku_instance_a_url }}"
+        curl -k -o dataiku.tar.gz ${{ inputs.dataiku_instance_a_url }}/public/packages/dataiku-internal-client.tar.gz
         if [ $? -ne 0 ]; then
-          echo "Failed to download self-signed certificate"
+          echo "Failed to download Dataiku Python API package"
           exit 1
         fi
-        echo "Downloaded self-signed certificate"
-        mkdir -p /usr/local/share/ca-certificates/
-        cp self-signed.crt /usr/local/share/ca-certificates/
-        update-ca-certificates
-        if [ $? -ne 0 ]; then
-          echo "Failed to update CA certificates"
-          exit 1
-        fi
-        echo "Updated CA certificates"
-      shell: bash
-
-    - name: Configure Python to Trust Self-Signed Certificate
-      run: |
-        echo "Configuring Python to trust self-signed certificate"
-        export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-        export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-        echo "REQUESTS_CA_BUNDLE=$REQUESTS_CA_BUNDLE" >> $GITHUB_ENV
-        echo "SSL_CERT_FILE=$SSL_CERT_FILE" >> $GITHUB_ENV
+        echo "Downloaded Dataiku Python API package"
       shell: bash
 
     - name: Install Dataiku Python API
       run: |
-        echo "Installing Dataiku Python API from ${{ inputs.dataiku_instance_a_url }}"
-        pip install --trusted-host ${{ inputs.dataiku_instance_a_url }} ${{ inputs.dataiku_instance_a_url }}/public/packages/dataiku-internal-client.tar.gz
+        echo "Installing Dataiku Python API"
+        tar -xzf dataiku.tar.gz
+        if [ $? -ne 0 ]; then
+          echo "Failed to extract Dataiku Python API package"
+          exit 1
+        fi
+        echo "Extracted Dataiku Python API package"
+        python -m pip install ./dataiku
         if [ $? -ne 0 ]; then
           echo "Failed to install Dataiku Python API"
           exit 1
