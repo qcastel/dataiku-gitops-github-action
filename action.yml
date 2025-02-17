@@ -4,14 +4,23 @@ inputs:
   python-script:
     description: "Path to the Python script to run"
     required: true
-  dataiku_api_token:
-    description: "Dataiku API token"
+  dataiku_api_token_dev:
+    description: "Dataiku API token for the DEV instance"
     required: true
-  dataiku_instance_a_url:
-    description: "URL of the development Dataiku instance"
+  dataiku_api_token_staging:
+    description: "Dataiku API token for the Staging instance"
     required: true
-  dataiku_instance_b_url:
-    description: "URL of the staging Dataiku instance"
+  dataiku_api_token_prod:
+    description: "Dataiku API token for the Prod instance"
+    required: true
+  dataiku_instance_dev_url:
+    description: "URL of the DEV Dataiku instance"
+    required: true
+  dataiku_instance_staging_url:
+    description: "URL of the Staging Dataiku instance"
+    required: true
+  dataiku_instance_prod_url:
+    description: "URL of the Prod Dataiku instance"
     required: true
   dataiku_project_key:
     description: "Key of the Dataiku project"
@@ -35,9 +44,12 @@ runs:
 
     - name: Run Dataiku GitOps Action
       env:
-        DATAIKU_API_TOKEN: ${{ inputs.dataiku_api_token }}
-        DATAIKU_INSTANCE_A_URL: ${{ inputs.dataiku_instance_a_url }}
-        DATAIKU_INSTANCE_B_URL: ${{ inputs.dataiku_instance_b_url }}
+        DATAIKU_API_TOKEN_DEV: ${{ inputs.dataiku_api_token_dev }}
+        DATAIKU_API_TOKEN_STAGING: ${{ inputs.dataiku_api_token_staging }}
+        DATAIKU_API_TOKEN_PROD: ${{ inputs.dataiku_api_token_prod }}
+        DATAIKU_INSTANCE_DEV_URL: ${{ inputs.dataiku_instance_dev_url }}
+        DATAIKU_INSTANCE_STAGING_URL: ${{ inputs.dataiku_instance_staging_url }}
+        DATAIKU_INSTANCE_PROD_URL: ${{ inputs.dataiku_instance_prod_url }}
         DATAIKU_PROJECT_KEY: ${{ inputs.dataiku_project_key }}
       run: |
         python ${{ github.action_path }}/dataiku_gitops_action.py

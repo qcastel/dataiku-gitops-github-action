@@ -8,14 +8,18 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Access environment variables
-DATAIKU_API_TOKEN = os.getenv('DATAIKU_API_TOKEN')
-DATAIKU_INSTANCE_A_URL = os.getenv('DATAIKU_INSTANCE_A_URL')
-DATAIKU_INSTANCE_B_URL = os.getenv('DATAIKU_INSTANCE_B_URL')
+DATAIKU_API_TOKEN_DEV = os.getenv('DATAIKU_API_TOKEN_DEV')
+DATAIKU_API_TOKEN_STAGING = os.getenv('DATAIKU_API_TOKEN_STAGING')
+DATAIKU_API_TOKEN_PROD = os.getenv('DATAIKU_API_TOKEN_PROD')
+DATAIKU_INSTANCE_DEV_URL = os.getenv('DATAIKU_INSTANCE_DEV_URL')
+DATAIKU_INSTANCE_STAGING_URL = os.getenv('DATAIKU_INSTANCE_STAGING_URL')
+DATAIKU_INSTANCE_PROD_URL = os.getenv('DATAIKU_INSTANCE_PROD_URL')
 DATAIKU_PROJECT_KEY = os.getenv('DATAIKU_PROJECT_KEY')
 
 # Create Dataiku clients
-client_a = dataikuapi.DSSClient(DATAIKU_INSTANCE_A_URL, DATAIKU_API_TOKEN, no_check_certificate=True)
-client_b = dataikuapi.DSSClient(DATAIKU_INSTANCE_B_URL, DATAIKU_API_TOKEN, no_check_certificate=True)
+client_dev = dataikuapi.DSSClient(DATAIKU_INSTANCE_DEV_URL, DATAIKU_API_TOKEN_DEV, no_check_certificate=True)
+client_staging = dataikuapi.DSSClient(DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, no_check_certificate=True)
+client_prod = dataikuapi.DSSClient(DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, no_check_certificate=True)
 
 def export_bundle(client, project_key, bundle_id, release_notes=None):
     project = client.get_project(project_key)
@@ -40,34 +44,38 @@ def run_tests(script_path, instance_url, project_key):
 
 def main():
     try:
-        # Export bundle from instance A
+        # Export bundle from DEV instance
         bundle_id = "my_bundle"  # Replace with your desired bundle ID
         release_notes = "Initial release"  # Optional release notes
-        export_bundle(client_a, DATAIKU_PROJECT_KEY, bundle_id, release_notes)
+        export_bundle(client_dev, DATAIKU_PROJECT_KEY, bundle_id, release_notes)
         print(f"Bundle exported with ID: {bundle_id}")
 
         # Download the exported bundle
         download_path = 'bundle.zip'
-        download_export(client_a, DATAIKU_PROJECT_KEY, bundle_id, download_path)
+        download_export(client_dev, DATAIKU_PROJECT_KEY, bundle_id, download_path)
         print("Bundle downloaded.")
 
-        # Import bundle into instance B
-        import_bundle(client_b, DATAIKU_PROJECT_KEY, download_path)
+        # Import bundle into Staging instance
+        import_bundle(client_staging, DATAIKU_PROJECT_KEY, download_path)
         print(f"Bundle imported with ID: {bundle_id}")
 
-        # Run tests on instance B
-        if run_tests('dataiku-gitops-demo-project/tests.py', DATAIKU_INSTANCE_B_URL, DATAIKU_PROJECT_KEY):
+        # Run tests on Staging instance
+        if run_tests('dataiku-gitops-demo-project/tests.py', DATAIKU_INSTANCE_STAGING_URL, DATAIKU_PROJECT_KEY):
             print("Tests passed in staging. Deploying to production.")
-            # Run tests on instance A
-            if run_tests('dataiku-gitops-demo-project/tests.py', DATAIKU_INSTANCE_A_URL, DATAIKU_PROJECT_KEY):
+            # Import bundle into Prod instance
+            import_bundle(client_prod, DATAIKU_PROJECT_KEY, download_path)
+            print(f"Bundle imported with ID: {bundle_id}")
+
+            # Run tests on Prod instance
+            if run_tests('dataiku-gitops-demo-project/tests.py', DATAIKU_INSTANCE_PROD_URL, DATAIKU_PROJECT_KEY):
                 print("Deployment and tests successful in production.")
             else:
                 print("Tests failed in production. Undeploying project.")
-                undeploy_project(client_a, DATAIKU_PROJECT_KEY, bundle_id)
+                undeploy_project(client_prod, DATAIKU_PROJECT_KEY, bundle_id)
                 sys.exit(1)
         else:
             print("Tests failed in staging. Undeploying project.")
-            undeploy_project(client_b, DATAIKU_PROJECT_KEY, bundle_id)
+            undeploy_project(client_staging, DATAIKU_PROJECT_KEY, bundle_id)
             sys.exit(1)
 
     except Exception as e:
