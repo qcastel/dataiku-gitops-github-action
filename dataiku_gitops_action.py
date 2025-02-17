@@ -2,11 +2,7 @@ import os
 import sys
 import subprocess
 import dataikuapi
-import logging
-import requests
-import http.client
 import urllib3
-from packaging import version
 
 # Enable debug logging for the requests library
 #logging.getLogger("requests").setLevel(logging.DEBUG)
