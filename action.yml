@@ -25,6 +25,10 @@ inputs:
   dataiku_project_key:
     description: "Key of the Dataiku project"
     required: true
+  run_tests_only:
+    description: "Run tests only on staging"
+    required: false
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -51,6 +55,7 @@ runs:
         DATAIKU_INSTANCE_STAGING_URL: ${{ inputs.dataiku_instance_staging_url }}
         DATAIKU_INSTANCE_PROD_URL: ${{ inputs.dataiku_instance_prod_url }}
         DATAIKU_PROJECT_KEY: ${{ inputs.dataiku_project_key }}
+        RUN_TESTS_ONLY: ${{ inputs.run_tests_only }}
       run: |
         python ${{ github.action_path }}/dataiku_gitops_action.py
       shell: bash
