@@ -85,6 +85,10 @@ def main():
         import_bundle(client_staging, DATAIKU_PROJECT_KEY, download_path)
         print(f"Bundle imported with ID: {bundle_id}")
 
+         # Activate bundle in Prod instance
+        activate_bundle(client_prod, DATAIKU_PROJECT_KEY, bundle_id)
+        print(f"Bundle activated with ID: {bundle_id}")
+
         # Run tests on Staging instance
         if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
 
