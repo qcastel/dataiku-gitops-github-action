@@ -77,13 +77,13 @@ def main():
         download_export(client_dev, DATAIKU_PROJECT_KEY, bundle_id, download_path)
         print("Bundle downloaded.")
 
+        # List imported bundles in Staging instance before activation
+        imported_bundles_staging = list_imported_bundles(client_staging, DATAIKU_PROJECT_KEY)
+        previous_bundle_id_staging = max(imported_bundles_staging['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
+
         # Import bundle into Staging instance
         import_bundle(client_staging, DATAIKU_PROJECT_KEY, download_path)
         print(f"Bundle imported with ID: {bundle_id}")
-
-        # List imported bundles in Staging instance before activation
-        previous_bundle_id_staging = max(imported_bundles_staging['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
-        imported_bundles_staging = list_imported_bundles(client_staging, DATAIKU_PROJECT_KEY)
 
         # Run tests on Staging instance
         if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
@@ -92,13 +92,14 @@ def main():
                 print("Tests passed in staging. Skipping deployment to production.")
             else:
                 print("Tests passed in staging. Deploying to production.")
+
+                # List imported bundles in Prod instance before activation
+                imported_bundles_prod = list_imported_bundles(client_prod, DATAIKU_PROJECT_KEY)
+                previous_bundle_id_prod = max(imported_bundles_prod['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
+
                 # Import bundle into Prod instance
                 import_bundle(client_prod, DATAIKU_PROJECT_KEY, download_path)
                 print(f"Bundle imported with ID: {bundle_id}")
-
-                # List imported bundles in Prod instance before activation
-                previous_bundle_id_prod = max(imported_bundles_prod['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
-                imported_bundles_prod = list_imported_bundles(client_prod, DATAIKU_PROJECT_KEY)
 
                 # Activate bundle in Prod instance
                 activate_bundle(client_prod, DATAIKU_PROJECT_KEY, bundle_id)
