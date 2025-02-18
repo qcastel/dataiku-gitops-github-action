@@ -88,7 +88,7 @@ def main():
         # Run tests on Staging instance
         if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
 
-            if RUN_TESTS_ONLY:  
+            if RUN_TESTS_ONLY:
                 print("Tests passed in staging. Skipping deployment to production.")
             else:
                 print("Tests passed in staging. Deploying to production.")
