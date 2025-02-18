@@ -21,6 +21,7 @@ DATAIKU_INSTANCE_STAGING_URL = os.getenv('DATAIKU_INSTANCE_STAGING_URL')
 DATAIKU_INSTANCE_PROD_URL = os.getenv('DATAIKU_INSTANCE_PROD_URL')
 DATAIKU_PROJECT_KEY = os.getenv('DATAIKU_PROJECT_KEY')
 RUN_TESTS_ONLY = os.getenv('RUN_TESTS_ONLY', 'false').lower() == 'true'
+PYTHON_SCRIPT = os.getenv('PYTHON_SCRIPT', 'tests.py')
 
 # Create Dataiku clients
 client_dev = dataikuapi.DSSClient(DATAIKU_INSTANCE_DEV_URL, DATAIKU_API_TOKEN_DEV, no_check_certificate=True)
@@ -62,39 +63,34 @@ def run_tests(script_path, instance_url, api_key, project_key):
 
 def main():
     try:
-        if RUN_TESTS_ONLY:
-            print("Running tests only on staging.")
-            # Run tests on Staging instance
-            if run_tests('dataiku-gitops-demo-project/tests.py', DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
-                print("Tests passed in staging.")
+        # Get the current commit ID
+        commit_id = get_commit_id()
+        bundle_id = generate_bundle_id(commit_id)
+        release_notes = "Initial release"  # Optional release notes
+
+        # Export bundle from DEV instance
+        export_bundle(client_dev, DATAIKU_PROJECT_KEY, bundle_id, release_notes)
+        print(f"Bundle exported with ID: {bundle_id}")
+
+        # Download the exported bundle
+        download_path = 'bundle.zip'
+        download_export(client_dev, DATAIKU_PROJECT_KEY, bundle_id, download_path)
+        print("Bundle downloaded.")
+
+        # Import bundle into Staging instance
+        import_bundle(client_staging, DATAIKU_PROJECT_KEY, download_path)
+        print(f"Bundle imported with ID: {bundle_id}")
+
+        # List imported bundles in Staging instance before activation
+        imported_bundles_staging = list_imported_bundles(client_staging, DATAIKU_PROJECT_KEY)
+        previous_bundle_id_staging = max(imported_bundles_staging['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
+
+        # Run tests on Staging instance
+        if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
+
+            if RUN_TESTS_ONLY:  
+                print("Tests passed in staging. Skipping deployment to production.")
             else:
-                print("Tests failed in staging.")
-                sys.exit(1)
-        else:
-            # Get the current commit ID
-            commit_id = get_commit_id()
-            bundle_id = generate_bundle_id(commit_id)
-            release_notes = "Initial release"  # Optional release notes
-
-            # Export bundle from DEV instance
-            export_bundle(client_dev, DATAIKU_PROJECT_KEY, bundle_id, release_notes)
-            print(f"Bundle exported with ID: {bundle_id}")
-
-            # Download the exported bundle
-            download_path = 'bundle.zip'
-            download_export(client_dev, DATAIKU_PROJECT_KEY, bundle_id, download_path)
-            print("Bundle downloaded.")
-
-            # Import bundle into Staging instance
-            import_bundle(client_staging, DATAIKU_PROJECT_KEY, download_path)
-            print(f"Bundle imported with ID: {bundle_id}")
-
-            # List imported bundles in Staging instance before activation
-            imported_bundles_staging = list_imported_bundles(client_staging, DATAIKU_PROJECT_KEY)
-            previous_bundle_id_staging = max(imported_bundles_staging['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
-
-            # Run tests on Staging instance
-            if run_tests('dataiku-gitops-demo-project/tests.py', DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
                 print("Tests passed in staging. Deploying to production.")
                 # Import bundle into Prod instance
                 import_bundle(client_prod, DATAIKU_PROJECT_KEY, download_path)
@@ -109,18 +105,18 @@ def main():
                 print(f"Bundle activated with ID: {bundle_id}")
 
                 # Run tests on Prod instance
-                if run_tests('dataiku-gitops-demo-project/tests.py', DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, DATAIKU_PROJECT_KEY):
+                if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, DATAIKU_PROJECT_KEY):
                     print("Deployment and tests successful in production.")
                 else:
                     print("Tests failed in production. Activating previous bundle.")
                     activate_bundle(client_prod, DATAIKU_PROJECT_KEY, previous_bundle_id_prod)
                     print(f"Previous bundle activated with ID: {previous_bundle_id_prod}")
                     sys.exit(1)
-            else:
-                print("Tests failed in staging. Activating previous bundle.")
-                activate_bundle(client_staging, DATAIKU_PROJECT_KEY, previous_bundle_id_staging)
-                print(f"Previous bundle activated with ID: {previous_bundle_id_staging}")
-                sys.exit(1)
+        else:
+            print("Tests failed in staging. Activating previous bundle.")
+            activate_bundle(client_staging, DATAIKU_PROJECT_KEY, previous_bundle_id_staging)
+            print(f"Previous bundle activated with ID: {previous_bundle_id_staging}")
+            sys.exit(1)
 
     except Exception as e:
         print(f"An error occurred: {e}")

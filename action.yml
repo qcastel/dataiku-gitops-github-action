@@ -56,6 +56,7 @@ runs:
         DATAIKU_INSTANCE_PROD_URL: ${{ inputs.dataiku_instance_prod_url }}
         DATAIKU_PROJECT_KEY: ${{ inputs.dataiku_project_key }}
         RUN_TESTS_ONLY: ${{ inputs.run_tests_only }}
+        PYTHON_SCRIPT: ${{ inputs.python-script }}
       run: |
         python ${{ github.action_path }}/dataiku_gitops_action.py
       shell: bash
