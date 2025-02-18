@@ -4,7 +4,9 @@ import random
 import string
 import subprocess
 import sys
+import traceback
 from datetime import datetime
+from time import sleep
 
 import dataikuapi
 import urllib3
@@ -44,10 +46,12 @@ def download_export(client, project_key, bundle_id, path):
     project = client.get_project(project_key)
     project.download_exported_bundle_archive_to_file(bundle_id, path)
 
-def import_bundle(client, project_key, fp):
+def import_bundle(client, bundle_id, project_key, fp):
     project = client.get_project(project_key)
+    print(f"Importing bundle from {fp}")
     with open(fp, 'rb') as f:
         project.import_bundle_from_stream(f)
+    project.preload_bundle(bundle_id)
 
 def activate_bundle(client, project_key, bundle_id):
     project = client.get_project(project_key)
@@ -82,11 +86,10 @@ def main():
         previous_bundle_id_staging = max(imported_bundles_staging['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
 
         # Import bundle into Staging instance
-        import_bundle(client_staging, DATAIKU_PROJECT_KEY, download_path)
+        import_bundle(client_staging, bundle_id, DATAIKU_PROJECT_KEY, download_path)
         print(f"Bundle imported with ID: {bundle_id}")
 
-         # Activate bundle in Prod instance
-        activate_bundle(client_prod, DATAIKU_PROJECT_KEY, bundle_id)
+        activate_bundle(client_staging, DATAIKU_PROJECT_KEY, bundle_id)
         print(f"Bundle activated with ID: {bundle_id}")
 
         # Run tests on Staging instance
@@ -102,7 +105,7 @@ def main():
                 previous_bundle_id_prod = max(imported_bundles_prod['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
 
                 # Import bundle into Prod instance
-                import_bundle(client_prod, DATAIKU_PROJECT_KEY, download_path)
+                import_bundle(client_prod, bundle_id, DATAIKU_PROJECT_KEY, download_path)
                 print(f"Bundle imported with ID: {bundle_id}")
 
                 # Activate bundle in Prod instance
@@ -125,6 +128,7 @@ def main():
 
     except Exception as e:
         print(f"An error occurred: {e}")
+        traceback.print_exc()  # Print the stack trace
         sys.exit(1)
 
 if __name__ == '__main__':
