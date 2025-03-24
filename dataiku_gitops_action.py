@@ -24,11 +24,12 @@ DATAIKU_INSTANCE_PROD_URL = os.getenv('DATAIKU_INSTANCE_PROD_URL')
 DATAIKU_PROJECT_KEY = os.getenv('DATAIKU_PROJECT_KEY')
 RUN_TESTS_ONLY = os.getenv('RUN_TESTS_ONLY', 'false').lower() == 'true'
 PYTHON_SCRIPT = os.getenv('PYTHON_SCRIPT', 'tests.py')
+CLIENT_CERTIFICATE = os.getenv('CLIENT_CERTIFICATE', None)
 
 # Create Dataiku clients
-client_dev = dataikuapi.DSSClient(DATAIKU_INSTANCE_DEV_URL, DATAIKU_API_TOKEN_DEV, no_check_certificate=True)
-client_staging = dataikuapi.DSSClient(DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, no_check_certificate=True)
-client_prod = dataikuapi.DSSClient(DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, no_check_certificate=True)
+client_dev = dataikuapi.DSSClient(DATAIKU_INSTANCE_DEV_URL, DATAIKU_API_TOKEN_DEV, no_check_certificate=True, client_certificate=CLIENT_CERTIFICATE)
+client_staging = dataikuapi.DSSClient(DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, no_check_certificate=True, client_certificate=CLIENT_CERTIFICATE)
+client_prod = dataikuapi.DSSClient(DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, no_check_certificate=True, client_certificate=CLIENT_CERTIFICATE)
 
 def get_commit_id():
     result = subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True)
@@ -62,11 +63,54 @@ def list_imported_bundles(client, project_key):
     return project.list_imported_bundles()
 
 def run_tests(script_path, instance_url, api_key, project_key):
-    result = subprocess.run([sys.executable, script_path, instance_url, api_key, project_key], capture_output=True, text=True)
+    """Run pytest with environment variables for Dataiku configuration."""
+    env = os.environ.copy()
+    env.update({
+        'DATAIKU_INSTANCE_URL': instance_url,
+        'DATAIKU_API_KEY': api_key,
+        'DATAIKU_PROJECT_KEY': project_key
+    })
+    
+    result = subprocess.run([
+        'pytest',
+        '-v',
+        script_path,
+        '--no-header',  # Minimize output noise
+        '--tb=short'    # Shorter traceback format
+    ], env=env, capture_output=True, text=True)
+    
+    # Print test output for visibility
+    print(result.stdout)
+    if result.stderr:
+        print(result.stderr)
+    
     return result.returncode == 0
+
+def get_dataiku_latest_commit(client, project_key):
+    """Get the latest commit SHA from Dataiku project."""
+    project = client.get_project(project_key)
+    return project.get_git_status()['currentBranch']['commitId']
+
+def get_git_sha():
+    """Get the current Git SHA."""
+    result = subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True)
+    return result.stdout.strip()
+
+def sync_dataiku_to_git(client, project_key):
+    """Push Dataiku changes to Git."""
+    project = client.get_project(project_key)
+    project.push_to_git()
 
 def main():
     try:
+        dataiku_sha = get_dataiku_latest_commit(client_dev, DATAIKU_PROJECT_KEY)
+        git_sha = get_git_sha()
+        if dataiku_sha != git_sha:
+            print(f"Dataiku commit SHA ({dataiku_sha}) doesn't match Git SHA ({git_sha})")
+            sync_dataiku_to_git(client_dev, DATAIKU_PROJECT_KEY)
+            print("Pushed Dataiku changes to Git. Restarting process.")
+            sys.exit(0)  # Exit cleanly to allow the process to restart
+
         # Get the current commit ID
         commit_id = get_commit_id()
         bundle_id = generate_bundle_id(commit_id)
