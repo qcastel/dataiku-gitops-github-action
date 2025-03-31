@@ -109,16 +109,12 @@ def sync_dataiku_to_git(client, project_key):
     return project.push()
 
 def get_git_sha():
-    """Get the Git SHA from either PR or push event."""
-    sha = os.getenv('GITHUB_EVENT_PULL_REQUEST_HEAD_SHA')
-    if sha:
-        return sha
+    """Get the latest non-merge commit SHA."""
+    result = subprocess.run(['git', 'rev-list', '--no-merges', '-n', '1', 'HEAD'], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise ValueError("Failed to get latest non-merge commit SHA")
     
-    result = subprocess.run(['git', 'rev-parse', 'origin/master'], capture_output=True, text=True)
-    if result.returncode == 0:
-        return result.stdout.strip()
-    
-    return os.getenv('GITHUB_SHA')
+    return result.stdout.strip()
 
 def main():
     try:
