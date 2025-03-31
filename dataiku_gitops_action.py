@@ -4,6 +4,7 @@ import random
 import string
 import subprocess
 import sys
+import time
 import traceback
 from datetime import datetime
 from time import sleep
@@ -120,35 +121,29 @@ def get_git_sha():
     
     return result.stdout.strip()
 
-def deploy(client_dev, project_key, environment):
-    """Deploy to production using local deployer."""
-    project = client_dev.get_project(project_key)
-    
-    # Get the local deployer for the project
-    deployer = project.get_deployer()
-    
-    # Get the deployment ID for production (usually "PROD" or similar)
-    deployments = deployer.get_all_deployments()
-    prod_deployment = next((d for d in deployments if d['id'].upper() == environment.upper()), None)
-    
-    if not prod_deployment:
-        raise ValueError("No production deployment found")
-    
-    # Start the deployment
-    deployment = deployer.start_deployment(prod_deployment['id'])
-    print(f"Started deployment to production with ID: {deployment.id}")
-    
-    # Wait for deployment to complete
-    status = deployment.get_status()
-    while status['state'] in ['RUNNING', 'QUEUED']:
-        print(f"Deployment status: {status['state']}")
-        sleep(10)
-        status = deployment.get_status()
-    
-    if status['state'] != 'DONE':
-        raise ValueError(f"Deployment failed with status: {status['state']}")
-    
-    print(f"{environment} deployment completed successfully")
+def deploy(environment):
+    """Deploy to production using bundle and deployer."""
+    try:
+        bundle_id = f"bundle_{int(time.time())}"  # Create unique bundle ID
+        project = client_dev.get_project(DATAIKU_PROJECT_KEY)
+        project.export_bundle(bundle_id)
+        
+        # Publish the bundle to the deployer
+        project.publish_bundle(bundle_id)
+        
+        # Deploy the bundle to the environment using the deployer
+        deployer = client_dev.get_deployer()
+        deployer.deploy_bundle_to_environment(
+            bundle_id=bundle_id,
+            project_key=DATAIKU_PROJECT_KEY,
+            environment_name=environment
+        )
+        
+        print(f"Successfully deployed bundle {bundle_id} to environment {environment}")
+        
+    except Exception as e:
+        print(f"Failed to deploy: {str(e)}")
+        raise e
 
 def main():
     try:
@@ -160,7 +155,7 @@ def main():
             print("Pushed Dataiku changes to Git. Restarting process.")
             sys.exit(0)
 
-        deploy(client_dev, DATAIKU_PROJECT_KEY, "STAGING")
+        deploy("STAGING")
 
         # Run tests on Staging instance
         if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
@@ -170,7 +165,7 @@ def main():
                 print("Tests passed in staging. Deploying to production.")
                 
                 # Replace bundle import/export with deployment
-                deploy(client_dev, DATAIKU_PROJECT_KEY, "PROD")
+                deploy("PROD")
                 
                 # Run tests on Prod instance
                 if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, DATAIKU_PROJECT_KEY):
@@ -180,9 +175,7 @@ def main():
                     # Note: With this approach, rollback needs to be handled through Dataiku's deployment feature
                     sys.exit(1)
         else:
-            print("Tests failed in staging. Activating previous bundle.")
-            activate_bundle(client_staging, DATAIKU_PROJECT_KEY, previous_bundle_id_staging)
-            print(f"Previous bundle activated with ID: {previous_bundle_id_staging}")
+            print("Tests failed in staging.")
             sys.exit(1)
 
     except Exception as e:
