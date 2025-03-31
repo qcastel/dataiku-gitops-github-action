@@ -91,7 +91,19 @@ def get_dataiku_latest_commit(client, project_key):
     project = client.get_project(project_key)
     project_git = project.get_project_git()
     status = project_git.get_status()
-    return status['currentBranch']['commitId']
+    
+    # Debug logging
+    print(f"Git status type: {type(status)}")
+    print(f"Git status content: {status}")
+    
+    # Handle both string and dict responses
+    if isinstance(status, dict):
+        return status['currentBranch']['commitId']
+    elif isinstance(status, str):
+        # If it's a string, it might be the commit ID directly
+        return status.strip()
+    else:
+        raise ValueError(f"Unexpected git status type: {type(status)}")
 
 def get_git_sha():
     """Get the current Git SHA."""
