@@ -131,13 +131,16 @@ def deploy(environment):
         # Publish the bundle to the deployer
         project.publish_bundle(bundle_id)
         
-        # Deploy the bundle to the environment using the deployer
-        deployer = client_dev.get_deployer()
-        deployer.deploy_bundle_to_environment(
-            bundle_id=bundle_id,
+        # Get the deployer from the client and deploy
+        deployer = client_dev.get_projectdeployer()
+        deployment = deployer.create_deployment(
+            deployment_id=f"deploy_{bundle_id}",
             project_key=DATAIKU_PROJECT_KEY,
-            environment_name=environment
+            infra_id=environment,
+            bundle_id=bundle_id
         )
+        update = deployment.start_update()
+        update.wait_for_result()
         
         print(f"Successfully deployed bundle {bundle_id} to environment {environment}")
         
