@@ -10,6 +10,7 @@ from time import sleep
 
 import dataikuapi
 import urllib3
+from dataikuapi.dss.project import ProjectGit
 
 # Disable warnings for unverified HTTPS requests
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -89,7 +90,8 @@ def run_tests(script_path, instance_url, api_key, project_key):
 def get_dataiku_latest_commit(client, project_key):
     """Get the latest commit SHA from Dataiku project."""
     project = client.get_project(project_key)
-    return project.get_git_status()['currentBranch']['commitId']
+    project_git = ProjectGit(project)
+    return project_git.full_status()['currentBranch']['commitId']
 
 def get_git_sha():
     """Get the current Git SHA."""
@@ -99,7 +101,8 @@ def get_git_sha():
 def sync_dataiku_to_git(client, project_key):
     """Push Dataiku changes to Git."""
     project = client.get_project(project_key)
-    project.push_to_git()
+    project_git = ProjectGit(project)
+    return project_git.push()
 
 def main():
     try:
