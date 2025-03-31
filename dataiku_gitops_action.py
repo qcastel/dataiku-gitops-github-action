@@ -120,6 +120,36 @@ def get_git_sha():
     
     return result.stdout.strip()
 
+def deploy_to_prod(client_dev, project_key):
+    """Deploy to production using local deployer."""
+    project = client_dev.get_project(project_key)
+    
+    # Get the local deployer for the project
+    deployer = project.get_deployer()
+    
+    # Get the deployment ID for production (usually "PROD" or similar)
+    deployments = deployer.get_all_deployments()
+    prod_deployment = next((d for d in deployments if d['id'].upper() == 'PROD'), None)
+    
+    if not prod_deployment:
+        raise ValueError("No production deployment found")
+    
+    # Start the deployment
+    deployment = deployer.start_deployment(prod_deployment['id'])
+    print(f"Started deployment to production with ID: {deployment.id}")
+    
+    # Wait for deployment to complete
+    status = deployment.get_status()
+    while status['state'] in ['RUNNING', 'QUEUED']:
+        print(f"Deployment status: {status['state']}")
+        sleep(10)
+        status = deployment.get_status()
+    
+    if status['state'] != 'DONE':
+        raise ValueError(f"Deployment failed with status: {status['state']}")
+    
+    print("Production deployment completed successfully")
+
 def main():
     try:
         dataiku_sha = get_dataiku_latest_commit(client_dev, DATAIKU_PROJECT_KEY)
@@ -157,31 +187,20 @@ def main():
 
         # Run tests on Staging instance
         if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
-
             if RUN_TESTS_ONLY:
                 print("Tests passed in staging. Skipping deployment to production.")
             else:
                 print("Tests passed in staging. Deploying to production.")
-
-                # List imported bundles in Prod instance before activation
-                imported_bundles_prod = list_imported_bundles(client_prod, DATAIKU_PROJECT_KEY)
-                previous_bundle_id_prod = max(imported_bundles_prod['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
-
-                # Import bundle into Prod instance
-                import_bundle(client_prod, bundle_id, DATAIKU_PROJECT_KEY, download_path)
-                print(f"Bundle imported with ID: {bundle_id}")
-
-                # Activate bundle in Prod instance
-                activate_bundle(client_prod, DATAIKU_PROJECT_KEY, bundle_id)
-                print(f"Bundle activated with ID: {bundle_id}")
-
+                
+                # Replace bundle import/export with deployment
+                deploy_to_prod(client_dev, DATAIKU_PROJECT_KEY)
+                
                 # Run tests on Prod instance
                 if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, DATAIKU_PROJECT_KEY):
                     print("Deployment and tests successful in production.")
                 else:
-                    print("Tests failed in production. Activating previous bundle.")
-                    activate_bundle(client_prod, DATAIKU_PROJECT_KEY, previous_bundle_id_prod)
-                    print(f"Previous bundle activated with ID: {previous_bundle_id_prod}")
+                    print("Tests failed in production.")
+                    # Note: With this approach, rollback needs to be handled through Dataiku's deployment feature
                     sys.exit(1)
         else:
             print("Tests failed in staging. Activating previous bundle.")
