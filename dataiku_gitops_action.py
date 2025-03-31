@@ -108,23 +108,27 @@ def sync_dataiku_to_git(client, project_key):
     project = client.get_project(project_key).get_project_git()
     return project.push()
 
-def get_git_sha():
-    """Get the latest non-merge commit SHA."""
-    result = subprocess.run(['git', 'rev-list', '--no-merges', '-n', '1', 'HEAD'], capture_output=True, text=True)
+def get_git_parent_shas():
+    """Get both parent commits of a merge commit."""
+    # Get parent commits of HEAD
+    result = subprocess.run(['git', 'log', '--pretty=%P', '-n', '1'], capture_output=True, text=True)
     if result.returncode != 0:
-        raise ValueError("Failed to get latest non-merge commit SHA")
+        raise ValueError("Failed to get parent commits")
     
-    return result.stdout.strip()
+    # Split the result into individual SHAs
+    return result.stdout.strip().split()
 
 def main():
     try:
         dataiku_sha = get_dataiku_latest_commit(client_dev, DATAIKU_PROJECT_KEY)
-        git_sha = get_git_sha()
-        if dataiku_sha != git_sha:
-            print(f"Dataiku commit SHA ({dataiku_sha}) doesn't match Git SHA ({git_sha})")
+        parent_shas = get_git_parent_shas()
+        
+        # Check if Dataiku SHA matches any parent commit
+        if dataiku_sha not in parent_shas:
+            print(f"Dataiku commit SHA ({dataiku_sha}) doesn't match any parent commits {parent_shas}")
             sync_dataiku_to_git(client_dev, DATAIKU_PROJECT_KEY)
             print("Pushed Dataiku changes to Git. Restarting process.")
-            sys.exit(0)  # Exit cleanly to allow the process to restart
+            sys.exit(0)
 
         # Get the current commit ID
         commit_id = get_commit_id()
