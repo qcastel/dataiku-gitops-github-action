@@ -88,8 +88,10 @@ def run_tests(script_path, instance_url, api_key, project_key):
 
 def get_dataiku_latest_commit(client, project_key):
     """Get the latest commit SHA from Dataiku project."""
-    project = client.get_project(project_key).get_project_git()
-    return project.full_status()['currentBranch']['commitId']
+    project = client.get_project(project_key)
+    project_git = project.get_project_git()
+    status = project_git.get_status()
+    return status['currentBranch']['commitId']
 
 def get_git_sha():
     """Get the current Git SHA."""
