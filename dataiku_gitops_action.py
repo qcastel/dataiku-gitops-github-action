@@ -108,24 +108,24 @@ def sync_dataiku_to_git(client, project_key):
     project = client.get_project(project_key).get_project_git()
     return project.push()
 
-def get_git_parent_shas():
-    """Get both parent commits of a merge commit."""
-    # Get parent commits of HEAD
-    result = subprocess.run(['git', 'log', '--pretty=%P', '-n', '1'], capture_output=True, text=True)
-    if result.returncode != 0:
-        raise ValueError("Failed to get parent commits")
+def get_git_sha():
+    """Get commits from origin/master."""
+    # First fetch to ensure we have latest
+    subprocess.run(['git', 'fetch', 'origin', 'master'], capture_output=True)
     
-    # Split the result into individual SHAs
-    return result.stdout.strip().split()
+    # Get the first commit from origin/master
+    result = subprocess.run(['git', 'log', 'origin/master', '-n', '1', '--pretty=format:%H'], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise ValueError("Failed to get commit from origin/master")
+    
+    return result.stdout.strip()
 
 def main():
     try:
         dataiku_sha = get_dataiku_latest_commit(client_dev, DATAIKU_PROJECT_KEY)
-        parent_shas = get_git_parent_shas()
-        
-        # Check if Dataiku SHA matches any parent commit
-        if dataiku_sha not in parent_shas:
-            print(f"Dataiku commit SHA ({dataiku_sha}) doesn't match any parent commits {parent_shas}")
+        git_sha = get_git_sha()
+        if dataiku_sha != git_sha:
+            print(f"Dataiku commit SHA ({dataiku_sha}) doesn't match Git SHA ({git_sha})")
             sync_dataiku_to_git(client_dev, DATAIKU_PROJECT_KEY)
             print("Pushed Dataiku changes to Git. Restarting process.")
             sys.exit(0)
