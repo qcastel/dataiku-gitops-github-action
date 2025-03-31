@@ -90,20 +90,13 @@ def get_dataiku_latest_commit(client, project_key):
     """Get the latest commit SHA from Dataiku project."""
     project = client.get_project(project_key)
     project_git = project.get_project_git()
-    status = project_git.get_status()
     
-    # Debug logging
-    print(f"Git status type: {type(status)}")
-    print(f"Git status content: {status}")
+    # Get the git log to find the latest commit
+    log = project_git.log(count=1)  # Get only the most recent commit
+    if not log or 'entries' not in log or not log['entries']:
+        raise ValueError("No commit history found in Dataiku project")
     
-    # Handle both string and dict responses
-    if isinstance(status, dict):
-        return status['currentBranch']['commitId']
-    elif isinstance(status, str):
-        # If it's a string, it might be the commit ID directly
-        return status.strip()
-    else:
-        raise ValueError(f"Unexpected git status type: {type(status)}")
+    return log['entries'][0]['id']
 
 def get_git_sha():
     """Get the current Git SHA."""
