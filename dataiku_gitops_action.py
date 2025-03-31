@@ -103,11 +103,6 @@ def get_dataiku_latest_commit(client, project_key):
         
     return entry['commit']
 
-def get_git_sha():
-    """Get the current Git SHA."""
-    result = subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True)
-    return result.stdout.strip()
-
 def sync_dataiku_to_git(client, project_key):
     """Push Dataiku changes to Git."""
     project = client.get_project(project_key).get_project_git()
@@ -116,7 +111,7 @@ def sync_dataiku_to_git(client, project_key):
 def main():
     try:
         dataiku_sha = get_dataiku_latest_commit(client_dev, DATAIKU_PROJECT_KEY)
-        git_sha = get_git_sha()
+        git_sha = os.getenv('GITHUB_SHA')
         if dataiku_sha != git_sha:
             print(f"Dataiku commit SHA ({dataiku_sha}) doesn't match Git SHA ({git_sha})")
             sync_dataiku_to_git(client_dev, DATAIKU_PROJECT_KEY)
