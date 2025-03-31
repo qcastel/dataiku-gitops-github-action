@@ -120,7 +120,7 @@ def get_git_sha():
     
     return result.stdout.strip()
 
-def deploy_to_prod(client_dev, project_key):
+def deploy(client_dev, project_key, environment):
     """Deploy to production using local deployer."""
     project = client_dev.get_project(project_key)
     
@@ -129,7 +129,7 @@ def deploy_to_prod(client_dev, project_key):
     
     # Get the deployment ID for production (usually "PROD" or similar)
     deployments = deployer.get_all_deployments()
-    prod_deployment = next((d for d in deployments if d['id'].upper() == 'PROD'), None)
+    prod_deployment = next((d for d in deployments if d['id'].upper() == environment.upper()), None)
     
     if not prod_deployment:
         raise ValueError("No production deployment found")
@@ -148,7 +148,7 @@ def deploy_to_prod(client_dev, project_key):
     if status['state'] != 'DONE':
         raise ValueError(f"Deployment failed with status: {status['state']}")
     
-    print("Production deployment completed successfully")
+    print(f"{environment} deployment completed successfully")
 
 def main():
     try:
@@ -160,30 +160,7 @@ def main():
             print("Pushed Dataiku changes to Git. Restarting process.")
             sys.exit(0)
 
-        # Get the current commit ID
-        commit_id = get_commit_id()
-        bundle_id = generate_bundle_id(commit_id)
-        release_notes = "Initial release"  # Optional release notes
-
-        # Export bundle from DEV instance
-        export_bundle(client_dev, DATAIKU_PROJECT_KEY, bundle_id, release_notes)
-        print(f"Bundle exported with ID: {bundle_id}")
-
-        # Download the exported bundle
-        download_path = 'bundle.zip'
-        download_export(client_dev, DATAIKU_PROJECT_KEY, bundle_id, download_path)
-        print("Bundle downloaded.")
-
-        # List imported bundles in Staging instance before activation
-        imported_bundles_staging = list_imported_bundles(client_staging, DATAIKU_PROJECT_KEY)
-        previous_bundle_id_staging = max(imported_bundles_staging['bundles'], key=lambda bundle: datetime.strptime(bundle['importState']['importedOn'], '%Y-%m-%dT%H:%M:%S.%f%z'))['bundleId']
-
-        # Import bundle into Staging instance
-        import_bundle(client_staging, bundle_id, DATAIKU_PROJECT_KEY, download_path)
-        print(f"Bundle imported with ID: {bundle_id}")
-
-        activate_bundle(client_staging, DATAIKU_PROJECT_KEY, bundle_id)
-        print(f"Bundle activated with ID: {bundle_id}")
+        deploy(client_dev, DATAIKU_PROJECT_KEY, "STAGING")
 
         # Run tests on Staging instance
         if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
@@ -193,7 +170,7 @@ def main():
                 print("Tests passed in staging. Deploying to production.")
                 
                 # Replace bundle import/export with deployment
-                deploy_to_prod(client_dev, DATAIKU_PROJECT_KEY)
+                deploy(client_dev, DATAIKU_PROJECT_KEY, "PROD")
                 
                 # Run tests on Prod instance
                 if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, DATAIKU_PROJECT_KEY):
