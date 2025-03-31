@@ -93,10 +93,24 @@ def get_dataiku_latest_commit(client, project_key):
     
     # Get the git log to find the latest commit
     log = project_git.log(count=1)  # Get only the most recent commit
+    
+    # Debug logging
+    print(f"Git log response: {log}")
+    
     if not log or 'entries' not in log or not log['entries']:
         raise ValueError("No commit history found in Dataiku project")
     
-    return log['entries'][0]['id']
+    # Debug logging for first entry
+    print(f"First log entry: {log['entries'][0]}")
+    
+    # The commit ID might be under a different key
+    entry = log['entries'][0]
+    # Try common field names for commit ID
+    for field in ['id', 'commitId', 'sha', 'hash']:
+        if field in entry:
+            return entry[field]
+            
+    raise ValueError(f"Could not find commit ID in log entry: {entry}")
 
 def get_git_sha():
     """Get the current Git SHA."""
