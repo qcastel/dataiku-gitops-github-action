@@ -111,7 +111,7 @@ def sync_dataiku_to_git(client, project_key):
 def main():
     try:
         dataiku_sha = get_dataiku_latest_commit(client_dev, DATAIKU_PROJECT_KEY)
-        git_sha = os.getenv('GITHUB_SHA')
+        git_sha = os.getenv('GITHUB_EVENT_PULL_REQUEST_HEAD_SHA')
         if dataiku_sha != git_sha:
             print(f"Dataiku commit SHA ({dataiku_sha}) doesn't match Git SHA ({git_sha})")
             sync_dataiku_to_git(client_dev, DATAIKU_PROJECT_KEY)
