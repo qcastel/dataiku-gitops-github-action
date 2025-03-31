@@ -10,7 +10,6 @@ from time import sleep
 
 import dataikuapi
 import urllib3
-from dataikuapi.dss.project import ProjectGit
 
 # Disable warnings for unverified HTTPS requests
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
