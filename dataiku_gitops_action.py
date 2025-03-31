@@ -158,7 +158,7 @@ def main():
             print("Pushed Dataiku changes to Git. Restarting process.")
             sys.exit(0)
 
-        deploy("STAGING")
+        deploy("stagingv2")
 
         # Run tests on Staging instance
         if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
@@ -168,7 +168,7 @@ def main():
                 print("Tests passed in staging. Deploying to production.")
                 
                 # Replace bundle import/export with deployment
-                deploy("PROD")
+                deploy("prod")
                 
                 # Run tests on Prod instance
                 if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, DATAIKU_PROJECT_KEY):
