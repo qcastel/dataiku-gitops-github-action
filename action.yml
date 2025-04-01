@@ -25,6 +25,12 @@ inputs:
   dataiku_project_key:
     description: "Key of the Dataiku project"
     required: true
+  dataiku_infra_id_staging:
+    description: "Infra ID for the Staging instance"
+    required: true
+  dataiku_infra_id_prod:
+    description: "Infra ID for the Prod instance"
+    required: true
   run_tests_only:
     description: "Run tests only on staging"
     required: false
@@ -58,6 +64,8 @@ runs:
         DATAIKU_INSTANCE_STAGING_URL: ${{ inputs.dataiku_instance_staging_url }}
         DATAIKU_INSTANCE_PROD_URL: ${{ inputs.dataiku_instance_prod_url }}
         DATAIKU_PROJECT_KEY: ${{ inputs.dataiku_project_key }}
+        DATAIKU_INFRA_ID_STAGING: ${{ inputs.dataiku_infra_id_staging }}
+        DATAIKU_INFRA_ID_PROD: ${{ inputs.dataiku_infra_id_prod }}
         RUN_TESTS_ONLY: ${{ inputs.run_tests_only }}
         PYTHON_SCRIPT: ${{ inputs.python-script }}
         CLIENT_CERTIFICATE: ${{ inputs.client_certificate }}

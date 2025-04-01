@@ -23,6 +23,8 @@ DATAIKU_INSTANCE_DEV_URL = os.getenv('DATAIKU_INSTANCE_DEV_URL')
 DATAIKU_INSTANCE_STAGING_URL = os.getenv('DATAIKU_INSTANCE_STAGING_URL')
 DATAIKU_INSTANCE_PROD_URL = os.getenv('DATAIKU_INSTANCE_PROD_URL')
 DATAIKU_PROJECT_KEY = os.getenv('DATAIKU_PROJECT_KEY')
+DATAIKU_INFRA_ID_STAGING = os.getenv('DATAIKU_INFRA_ID_STAGING')
+DATAIKU_INFRA_ID_PROD = os.getenv('DATAIKU_INFRA_ID_PROD')
 RUN_TESTS_ONLY = os.getenv('RUN_TESTS_ONLY', 'false').lower() == 'true'
 PYTHON_SCRIPT = os.getenv('PYTHON_SCRIPT', 'tests.py')
 CLIENT_CERTIFICATE = os.getenv('CLIENT_CERTIFICATE', None)
@@ -44,24 +46,6 @@ def export_bundle(client, project_key, bundle_id, release_notes=None):
     project.export_bundle(bundle_id, release_notes)
     return bundle_id
 
-def download_export(client, project_key, bundle_id, path):
-    project = client.get_project(project_key)
-    project.download_exported_bundle_archive_to_file(bundle_id, path)
-
-def import_bundle(client, bundle_id, project_key, fp):
-    project = client.get_project(project_key)
-    print(f"Importing bundle from {fp}")
-    with open(fp, 'rb') as f:
-        project.import_bundle_from_stream(f)
-    project.preload_bundle(bundle_id)
-
-def activate_bundle(client, project_key, bundle_id):
-    project = client.get_project(project_key)
-    project.activate_bundle(bundle_id)
-
-def list_imported_bundles(client, project_key):
-    project = client.get_project(project_key)
-    return project.list_imported_bundles()
 
 def run_tests(script_path, instance_url, api_key, project_key):
     """Run pytest with environment variables for Dataiku configuration."""
@@ -121,10 +105,11 @@ def get_git_sha():
     
     return result.stdout.strip()
 
-def deploy(environment):
+def deploy(infra_id):
     """Deploy to production using bundle and deployer."""
     try:
-        bundle_id = f"bundle_{int(time.time())}"  # Create unique bundle ID
+        commit_id = get_git_sha()
+        bundle_id = generate_bundle_id(commit_id)
         project = client_dev.get_project(DATAIKU_PROJECT_KEY)
         project.export_bundle(bundle_id)
         
@@ -136,13 +121,13 @@ def deploy(environment):
         deployment = deployer.create_deployment(
             deployment_id=f"deploy_{bundle_id}",
             project_key=DATAIKU_PROJECT_KEY,
-            infra_id=environment,
+            infra_id=infra_id,
             bundle_id=bundle_id
         )
         update = deployment.start_update()
         update.wait_for_result()
         
-        print(f"Successfully deployed bundle {bundle_id} to environment {environment}")
+        print(f"Successfully deployed bundle {bundle_id} to infra {infra_id}")
         
     except Exception as e:
         print(f"Failed to deploy: {str(e)}")
@@ -158,7 +143,7 @@ def main():
             print("Pushed Dataiku changes to Git. Restarting process.")
             sys.exit(0)
 
-        deploy("stagingv2")
+        deploy(DATAIKU_INFRA_ID_STAGING)
 
         # Run tests on Staging instance
         if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_STAGING_URL, DATAIKU_API_TOKEN_STAGING, DATAIKU_PROJECT_KEY):
@@ -168,7 +153,7 @@ def main():
                 print("Tests passed in staging. Deploying to production.")
                 
                 # Replace bundle import/export with deployment
-                deploy("prod")
+                deploy(DATAIKU_INFRA_ID_PROD)
                 
                 # Run tests on Prod instance
                 if run_tests(PYTHON_SCRIPT, DATAIKU_INSTANCE_PROD_URL, DATAIKU_API_TOKEN_PROD, DATAIKU_PROJECT_KEY):
